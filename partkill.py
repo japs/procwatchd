@@ -9,7 +9,7 @@
 # century and look it up online!
 #
 
-__version__ = "0.2"
+__version__ = "0.3"
 
 from multiprocessing import cpu_count
 from subprocess import check_output
