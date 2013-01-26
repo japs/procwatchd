@@ -29,6 +29,11 @@ PS_COL_MEM  = 3
 PS_COL_TIME = 9
 PS_COL_CMD  = 10 # and following
 
+def timesec(t):
+    tsplit=t.split(":")
+    return 60*int(tsplit[0])+int(tsplit[1])
+  
+
 class User():
     def __init__(self, username):
         self.username = username
@@ -67,46 +72,42 @@ class Process():
         self.cmd = cmd
 
     def check_memory(self, MEM_KILL, MEM_WATCH):
-        if self.mem > MEM_KILL:
-            annihilate(self.pid, 9)
-        elif self.mem > MEM_WATCH:
+        if float(self.mem) > MEM_KILL:
+            annihilate(int(self.pid), 9)
+        elif float(self.mem) > MEM_WATCH:
             pass
 
     def check_cpu(self, CPU_KILL, CPU_WATCH):
-        if self.cpu > CPU_KILL:
-            pass
-        elif self.cpu > CPU_WATCH:
+        if float(self.cpu) > CPU_KILL:
+            annihilate(int(self.pid), 9)
+        elif float(self.cpu) > CPU_WATCH:
             pass
 
-    def check_time(self, TIME_KILL, TIME_WATCH):
-        if self.time > TIME_KILL:
-            annihilate(self.pid, 9)
-        elif self.time > TIME_WATCH:
+    def check_time(self, TIME_KILL, TIME_WATCH):  
+        if timesec(self.time) > TIME_KILL:     
+            annihilate(int(self.pid), 9)
+        elif timesec(self.time) > TIME_WATCH:
             pass
 
     def check_time_cpu(self, TIME_WATCH, TIME_KILL,
                        CPU_WATCH, CPU_KILL):
-        if self.time > TIME_WATCH and self.cpu > CPU_KILL:
-            annihilate(self.pid, 9)
-        if self.time > TIME_WATCH and self.cpu > CPU_WATCH:
+        if(timesec(self.time) > TIME_KILL and float(self.cpu) > CPU_WATCH):
+            annihilate(int(self.pid), 9)
+        if(timesec(self.time) > TIME_WATCH and float(self.cpu) > CPU_WATCH):
             pass
 
     def all_checks(self, MEM_KILL, MEM_WATCH,
                    CPU_KILL, CPU_WATCH,
                    TIME_KILL, TIME_WATCH):
         status = 0x11FEBEEF
-        status = check_memory(self, MEM_KILL, MEM_WATCH)
-        if not status = 0xDEADBEEF:
-            status = check_cpu(self,CPU_KILL, CPU_WATCH):
-        if not status = 0x11FEBEEF:
-            status = check_TIME(self, TIME_KILL, TIME_WATCH):
-        if not status = 0x11FEBEEF:
-            check_time_cpu(self, TIME_WATCH, TIME_KILL,
-                           CPU_WATCH, CPU_KILL)
-
-
-)
-
+        status = self.check_memory(MEM_KILL, MEM_WATCH)
+        if not status == 0xDEADBEEF:
+            status = self.check_cpu(CPU_KILL, CPU_WATCH)
+        if not status == 0x11FEBEEF:
+            status = self.check_time(TIME_KILL, TIME_WATCH)
+        if not status == 0x11FEBEEF:
+            self.check_time_cpu(TIME_WATCH, TIME_KILL, 
+                                CPU_WATCH, CPU_KILL)
 
 class Processes(dict):
     def __init__(self, **kwargs):
@@ -114,9 +115,9 @@ class Processes(dict):
 
     def patrol(self):
         for p in self:
-            p.all_checks(MEM_KILL, MEM_WATCH,
-                         CPU_KILL, CPU_WATCH,
-                         TIME_KILL, TIME_WATCH)
+            self[p].all_checks(MEM_KILL, MEM_WATCH, 
+                               CPU_KILL, CPU_WATCH, 
+                               TIME_KILL, TIME_WATCH)
     
 class Watchlist():
     def __init__(self):
@@ -129,7 +130,7 @@ def annihilate(pid, signal):
     best_wishes(pid)
     return 0xDEADBEEF
 
-def best_wishes(pid, processes):
+def best_wishes(pid):
     ''' Send a mail with best wishes to the owner of process pid.
     '''
     #TODO
@@ -148,29 +149,28 @@ def get_ps_output(root=True, quick_action=-1):
     raw = check_output(['ps', 'aux'])
     out = raw.split('\n')
     processes = Processes()
-    for o in out[1:]:
+    for o in out[1:len(out)-1]:   # last line of out is empty
         osplit = o.split()
         if (root and osplit[PS_COL_USR]=='root'):
             continue
         else:
-            if (mem_quick_action > 0 and \
-                osplit[PS_COL_MEM] > mem_quick_action):
-                annihilate(osplit[PS_COL_PID], 9)
-            # create process object and append to list
-            p = Process( osplit[PS_COL_USR],
-                         osplit[PS_COL_PID],
-                         osplit[PS_COL_CPU],
-                         osplit[PS_COL_MEM],
-                         osplit[PS_COL_TIME],
-                         osplit[PS_COL_CMD]  )
-            processes[p.pid] = p
+            if (quick_action > 0 and \
+                float(osplit[PS_COL_MEM]) > quick_action):
+                annihilate(int(osplit[PS_COL_PID]), 9)
+            else:
+                # create process object and append to list
+                p = Process( osplit[PS_COL_USR],
+                             osplit[PS_COL_PID],
+                             osplit[PS_COL_CPU],
+                             osplit[PS_COL_MEM],
+                             osplit[PS_COL_TIME],
+                             osplit[PS_COL_CMD]  )
+                processes[p.pid] = p
     return processes
 
 
-
-
 if __name__ == '__main__' :
-    while True:
-        proesses = get_ps_output(root=False, quick_action=85)
+  while True:
+        processes = get_ps_output(root=False, quick_action=60)
         processes.patrol()
 
