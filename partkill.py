@@ -193,6 +193,7 @@ def get_ps_output(root=False, quick_action=MEM_QUICK_ACTION):
     '''
     
     raw = check_output(['ps', 'aux'])
+    raw = raw.decode()
     out = raw.split('\n')
     processes = Processes()
     for o in out[1:len(out)-1]:   # last line of out is empty
