@@ -14,8 +14,8 @@ __version__ = "0.2"
 from multiprocessing import cpu_count
 from subprocess import check_output
 from os import kill, popen
-from logging import basicConfig, debug, info, warning, critical, \
-                    DEBUG, INFO, WARNING, CRITICAL
+from logging import basicConfig, debug, info, warning, error ,critical, \
+                    DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 #USER DEFINITE STUFF
 LOG_FILE = 'procwatch.log'
@@ -125,6 +125,12 @@ class Process():
         if not status == 0xDEADBEEF:
             self.check_time_cpu(TIME_WATCH, TIME_KILL, 
                                 CPU_WATCH, CPU_KILL)
+    def __repr__(self):
+        r = "Process PID %s (%s)\n" %(self.pid, self.usr)
+        r += "                              "
+        r += "MEM %s\tCPU %s\tTIME %s" %(self.mem, self.cpu, 
+                                                  self.time)
+        return r
 
 class Processes(dict):
     def __init__(self, **kwargs):
@@ -143,31 +149,38 @@ class Watchlist():
         self.users = {}
 
 def annihilate(proc, signal):
-    kill(int(proc.pid), signal)
-    critical("pid " + proc.pid)
+    if not DRY_RUN:
+        kill(int(proc.pid), signal)
     best_wishes(proc)
+    critical("Killed process " + str(proc))
     return 0xDEADBEEF
+
 
 def best_wishes(proc):
     ''' Send a mail with best wishes to the owner of process pid.
     '''
-    sendmail_location = "/usr/sbin/sendmail" # sendmail location
-    p = popen("%s -t" % sendmail_location, "w")
-    p.write("From: %s\n" % "admin@admin")
-    p.write("To: %s\n" % proc.usr+"@somewere")
-    p.write("Subject: Killed process\n")
-    p.write("\n") # blank line separating headers from body
-    mailtext="Dear "+proc.usr+",\nyour process "+proc.cmd+" was killed " \
-              +"because it was using too much resources:\n" \
-              +proc.cpu+"% of CPU\n" \
-              +proc.mem+"% of RAM\n" \
-              +"for "+proc.time+" seconds\n"
-    p.write(mailtext)
-    status = p.close()
-    if status != 0:
-           print "Sendmail exit status:", status
-    info("mail sent to owner of process " + proc.pid)
-    pass
+    if not DRY_RUN:
+        sendmail_location = "/usr/sbin/sendmail" # sendmail location
+        p = popen("%s -t" % sendmail_location, "w")
+        p.write("From: %s\n" % "admin@admin")
+        p.write("To: %s\n" % proc.usr+"@somewere")
+        p.write("Subject: Killed process\n")
+        p.write("\n") # blank line separating headers from body
+        mailtext="Dear "+proc.usr+",\nyour process "+proc.cmd+" was killed " \
+                  +"because it was using too much resources:\n" \
+                  +proc.cpu+"% of CPU\n" \
+                  +proc.mem+"% of RAM\n" \
+                  +"for "+proc.time+" seconds\n"
+        p.write(mailtext)
+        status = p.close()
+        if status != 0:
+            error( "Sendmail exit status: %d" %status)
+        else:
+            info("Mail sent to %s for process %s" %(proc.usr, proc.pid))
+    else:
+        info("DRYRUN, would have sent mail to %s for process %s" %(proc.usr, 
+                                                                   proc.pid))
+
 
 def get_ps_output(root=False, quick_action=MEM_QUICK_ACTION):
     ''' Fetch the output of `ps aux` and return it as a list,
