@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # Copyright 2013 Jacopo Nespolo <jnespolo@gmail.com>
+# Copyright 2013 Claudio Bonati <claudio.bonati82@gmail.com>
 #
 # This program is released under the terms of the GNU General Public License,
 # either version 3 or, at your option, any following version as published by
@@ -8,6 +9,7 @@
 # century and look it up online!
 #
 
+__version__ = "0.1a"
 
 from multiprocessing import cpu_count
 from subprocess import check_output
