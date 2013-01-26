@@ -14,8 +14,18 @@ __version__ = "0.1a"
 from multiprocessing import cpu_count
 from subprocess import check_output
 from os import kill
+from logging import basicConfig, debug, info, warning, critical, \
+                    DEBUG, INFO, WARNING, CRITICAL
+
+#USER DEFINITE STUFF
+LOG_FILE = 'procwatch.log'
+LOG_VERBOSITY = DEBUG
+DRY_RUN = True           # If True, it doesn't actually kill anybody
+UPDATE_TIME = 2 #seconds
+
 
 #LIMITS          # unit
+MEM_QUICK_ACTION = 80 # %
 MEM_KILL   = 15  # %
 MEM_WATCH  = 8   # %
 CPU_KILL   = 95  # %
@@ -23,13 +33,18 @@ CPU_WATCH  = 60  # %
 TIME_KILL  = 600 # seconds
 TIME_WATCH = 450 # seconds
 
-
+#Col number for ps aux
 PS_COL_USR  = 0
 PS_COL_PID  = 1
 PS_COL_CPU  = 2 
 PS_COL_MEM  = 3
 PS_COL_TIME = 9
 PS_COL_CMD  = 10 # and following
+
+#logger setup
+basicConfig(filename=LOG_FILE, level=LOG_VERBOSITY,
+            format='%(asctime)s - %(levelname)s: %(message)s')
+
 
 def timesec(t):
     tsplit=t.split(":")
@@ -128,7 +143,9 @@ class Watchlist():
         self.users = {}
 
 def annihilate(pid, signal):
-    kill(pid, signal)
+    if not DRY_RUN:
+        kill(pid, signal)
+    critical("pid " + str(pid))
     best_wishes(pid)
     return 0xDEADBEEF
 
@@ -136,13 +153,14 @@ def best_wishes(pid):
     ''' Send a mail with best wishes to the owner of process pid.
     '''
     #TODO
+    info("mail sent to owner of process " + str(pid))
     pass
 
-def get_ps_output(root=True, quick_action=-1):
+def get_ps_output(root=False, quick_action=MEM_QUICK_ACTION):
     ''' Fetch the output of `ps aux` and return it as a list,
         one per output line.
         Optionally omit the processes of user root by setting
-        root=false.
+        root=False (default behaviour).
         quick_action allows the program to immediately take action
         against a process if it takes more %MEM than the value of this 
         variable.
@@ -153,7 +171,7 @@ def get_ps_output(root=True, quick_action=-1):
     processes = Processes()
     for o in out[1:len(out)-1]:   # last line of out is empty
         osplit = o.split()
-        if (root and osplit[PS_COL_USR]=='root'):
+        if ( not root and osplit[PS_COL_USR]=='root'):
             continue
         else:
             if (quick_action > 0 and \
@@ -172,7 +190,16 @@ def get_ps_output(root=True, quick_action=-1):
 
 
 if __name__ == '__main__' :
-  while True:
-        processes = get_ps_output(root=False, quick_action=60)
-        processes.patrol()
-
+    from time import sleep
+    from sys import exit
+    try:
+        info("Patrolling started")
+        while True:
+            debug("patrol update")
+            processes = get_ps_output(root=False, quick_action=60)
+            processes.patrol()
+            sleep(UPDATE_TIME)
+    except KeyboardInterrupt:
+        info("Patrolling stopped via keyboard interrupt")
+        exit(0)
+    
