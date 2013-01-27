@@ -159,8 +159,10 @@ class Processes(dict):
 def annihilate(proc, signal):
     if not DRY_RUN:
         kill(int(proc.pid), signal)
+        critical("Killed process " + str(proc))
+    else:
+        info("DRYRUN, would kill process " + str(proc))
     best_wishes(proc)
-    critical("Killed process " + str(proc))
     return 0xDEADBEEF
 
 def send_mail(from_address, to_address, msg):
