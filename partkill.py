@@ -17,12 +17,20 @@ from os import kill, popen
 from re import search
 from logging import basicConfig, debug, info, warning, error ,critical, \
                     DEBUG, INFO, WARNING, ERROR, CRITICAL
+from email.mime.text import MIMEText
+from smtplib import SMTP
 
 #USER DEFINITE STUFF
 LOG_FILE = 'procwatch.log'
 LOG_VERBOSITY = INFO
 DRY_RUN = True           # If True, it doesn't actually kill anybody
 UPDATE_TIME = 2 #seconds
+
+SMTP_SERVER = "smtp.example.eu:25"
+ADMIN_EMAIL = "admin@admin"
+EMAIL_DOMAIN = "@domain.eu"
+EMAIL_SUBJECT = "Process Killed for improper use of host"
+
 
 # processes that will be killed only in the event of a memory quick_action
 PROC_WHITELIST = ['cp', 'ssh', 'scp', 'tar', 'iceweasel']
@@ -148,12 +156,6 @@ class Processes(dict):
                                TIME_KILL, TIME_WATCH)
 
 
-class Watchlist():
-    def __init__(self):
-        self.mem = {}
-        self.cpu = {}
-        self.users = {}
-
 def annihilate(proc, signal):
     if not DRY_RUN:
         kill(int(proc.pid), signal)
@@ -161,31 +163,40 @@ def annihilate(proc, signal):
     critical("Killed process " + str(proc))
     return 0xDEADBEEF
 
+def send_mail(from_address, to_address, msg):
+    connection = SMTP(SMTP_SERVER)
+    #double check the behaviour of set_debuglevel and eventually
+    #integrate it in the logging facility
+    connection.set_debuglevel(False)
+    connection.sendmail(from_address, to_address, msg.as_string())
+    connection.quit()
+
 
 def best_wishes(proc):
     ''' Send a mail with best wishes to the owner of process pid.
     '''
     if not DRY_RUN:
-        sendmail_location = "/usr/sbin/sendmail" # sendmail location
-        p = popen("%s -t" % sendmail_location, "w")
-        p.write("From: %s\n" % "admin@admin")
-        p.write("To: %s\n" % proc.usr+"@somewere")
-        p.write("Subject: Killed process\n")
-        p.write("\n") # blank line separating headers from body
         mailtext="Dear "+proc.usr+",\nyour process "+proc.cmd+" was killed " \
                   +"because it was using too much resources:\n" \
                   +proc.cpu+"% of CPU\n" \
                   +proc.mem+"% of RAM\n" \
                   +"for "+proc.time+" seconds\n"
-        p.write(mailtext)
-        status = p.close()
+
+        msg = MIMEText (mailtext)
+        msg["From"] = ADMIN_EMAIL
+        msg["To"] = proc.usr + EMAIL_DOMAIN
+        msg["Subject"] = EMAIL_SUBJECT
+        
+        send_mail(ADMIN_EMAIL, 
+                  [proc.usr + EMAIL_DOMAIN, ADMIN_EMAIL],
+                  msg)
         if status != 0:
             error( "Sendmail exit status: %d" %status)
         else:
             info("Mail sent to %s for process %s" %(proc.usr, proc.pid))
     else:
-        info("DRYRUN, would have sent mail to %s for process %s" %(proc.usr, 
-                                                                   proc.pid))
+        info("DRYRUN, would send mail to %s for process %s" %(proc.usr,
+                                                              proc.pid))
 
 
 def get_ps_output(root=False, quick_action=MEM_QUICK_ACTION):
