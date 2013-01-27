@@ -14,15 +14,18 @@ __version__ = "0.3"
 from multiprocessing import cpu_count
 from subprocess import check_output
 from os import kill, popen
+from re import search
 from logging import basicConfig, debug, info, warning, error ,critical, \
                     DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 #USER DEFINITE STUFF
 LOG_FILE = 'procwatch.log'
-LOG_VERBOSITY = DEBUG
+LOG_VERBOSITY = INFO
 DRY_RUN = True           # If True, it doesn't actually kill anybody
 UPDATE_TIME = 2 #seconds
 
+# processes that will be killed only in the event of a memory quick_action
+PROC_WHITELIST = ['cp', 'ssh', 'scp', 'tar', 'iceweasel']
 
 #LIMITS          # unit
 MEM_QUICK_ACTION = 80 # %
@@ -128,8 +131,10 @@ class Process():
     def __repr__(self):
         r = "Process PID %s (%s)\n" %(self.pid, self.usr)
         r += "                              "
-        r += "MEM %s\tCPU %s\tTIME %s" %(self.mem, self.cpu, 
+        r += "MEM %s\tCPU %s\tTIME %s\n" %(self.mem, self.cpu, 
                                                   self.time)
+        r += "                              "
+        r += self.cmd
         return r
 
 class Processes(dict):
@@ -141,7 +146,8 @@ class Processes(dict):
             self[p].all_checks(MEM_KILL, MEM_WATCH, 
                                CPU_KILL, CPU_WATCH, 
                                TIME_KILL, TIME_WATCH)
-    
+
+
 class Watchlist():
     def __init__(self):
         self.mem = {}
@@ -208,11 +214,20 @@ def get_ps_output(root=False, quick_action=MEM_QUICK_ACTION):
                          osplit[PS_COL_MEM],
                          osplit[PS_COL_TIME],
                          osplit[PS_COL_CMD]  )
-            if (quick_action > 0 and float(p.mem) > quick_action):
+        if (quick_action > 0 and float(p.mem) > quick_action):
                 annihilate(p, 9)
-            else:
+        else:
+            whitelist = False
+            for proc in PROC_WHITELIST:
+                cmdsplit = (p.cmd).split()[0]
+                whitelisted = search('/' + proc + '$', cmdsplit)
+                if whitelisted != None:
+                    whitelist = True
+            if not whitelist:
                 # append to list
                 processes[p.pid] = p
+            else:
+                debug("WHITELISTED " + str(p))
     return processes
 
 
