@@ -11,14 +11,14 @@
 
 __version__ = "0.5"
 
-from multiprocessing import cpu_count
-from subprocess import check_output
-from os import kill, popen
-from re import search
+from email.mime.text import MIMEText
 from logging import basicConfig, debug, info, warning, error ,critical, \
                     DEBUG, INFO, WARNING, ERROR, CRITICAL
-from email.mime.text import MIMEText
+from os import kill, popen
+from re import search
 from smtplib import SMTP
+from subprocess import check_output
+from sys import argv
 
 #USER DEFINITE STUFF
 LOG_FILE = 'procwatch.log'
@@ -26,14 +26,14 @@ LOG_VERBOSITY = INFO
 DRY_RUN = True           # If True, it doesn't actually kill anybody
 UPDATE_TIME = 2 #seconds
 
+#USER DEFINITE MAILER STUFF
 SMTP_SERVER = "smtp.example.eu:25"
 ADMIN_EMAIL = "admin@admin"
 EMAIL_DOMAIN = "@domain.eu"
 EMAIL_SUBJECT = "Process Killed for improper use of host"
 
-
-# processes that will be killed only in the event of a memory quick_action
-PROC_WHITELIST = ['cp', 'ssh', 'scp', 'tar', 'iceweasel']
+#processes that will be killed only in the event of a memory quick_action
+PROC_WHITELIST = ['cp', 'ssh', 'scp', 'tar', 'screen', 'mv']
 
 #LIMITS          # unit
 MEM_QUICK_ACTION = 80 # %
@@ -56,39 +56,11 @@ PS_COL_CMD  = 10 # and following
 basicConfig(filename=LOG_FILE, level=LOG_VERBOSITY,
             format='%(asctime)s - %(levelname)s: %(message)s')
 
-
+## convert from MM:SS to seconds
 def timesec(t):
     tsplit=t.split(":")
     return 60*int(tsplit[0])+int(tsplit[1])
   
-
-class User():
-    def __init__(self, username):
-        self.username = username
-        self.memory = 0
-        self.cpu = 0
-        self.proclist = []
-
-class Users(dict):
-    def __init__(self, **kwargs):
-        dict.__init__(self, **kwargs)
-
-    def update_active_users(self, active_username_list):
-        ''' Update the dictionary {username: User_obj}
-            of the active users.
-        '''
-        #remove users that were active before and still are
-        for usr in self.keys():
-            if usr in active_username_list:
-                active_username_list.remove(usr)
-            else:
-                del self[usr]
-        #add newly found users
-        for usr in active_username_list:
-            self[usr] = User(usra)
-
-    def update_user(userobj):
-        self[userobj.username] = userobj
 
 class Process():
     def __init__(self, usr, pid, cpu, mem, time, cmd):
@@ -145,6 +117,7 @@ class Process():
         r += self.cmd
         return r
 
+
 class Processes(dict):
     def __init__(self, **kwargs):
         dict.__init__(self, **kwargs)
@@ -164,6 +137,7 @@ def annihilate(proc, signal):
         info("DRYRUN, would kill process " + str(proc))
     best_wishes(proc)
     return 0xDEADBEEF
+
 
 def send_mail(from_address, to_address, msg):
     connection = SMTP(SMTP_SERVER)
@@ -220,7 +194,7 @@ def get_ps_output(root=False, quick_action=MEM_QUICK_ACTION):
         if ( not root and osplit[PS_COL_USR]=='root'):
             continue
         else:
-            # create process object append to list
+            # create process object
             p = Process( osplit[PS_COL_USR],
                          osplit[PS_COL_PID],
                          osplit[PS_COL_CPU],
@@ -230,28 +204,33 @@ def get_ps_output(root=False, quick_action=MEM_QUICK_ACTION):
         if (quick_action > 0 and float(p.mem) > quick_action):
                 annihilate(p, 9)
         else:
+            # check if command is in the whitelist
             whitelist = False
             for proc in PROC_WHITELIST:
                 cmdsplit = (p.cmd).split()[0]
                 whitelisted = search('/' + proc + '$', cmdsplit)
                 if whitelisted != None:
                     whitelist = True
-            if not whitelist:
-                # append to list
-                processes[p.pid] = p
-            else:
+            if whitelist:
                 debug("WHITELISTED " + str(p))
+            else:
+                # check for the possibility of committing suicide
+                selfkill = search(argv[0], p.cmd)
+                if selfkill == None:
+                    # append to list
+                    processes[p.pid] = p
     return processes
 
 
 if __name__ == '__main__' :
     from time import sleep
     from sys import exit
+
     try:
         info("Patrolling started")
         while True:
             debug("patrol update")
-            processes = get_ps_output(root=False, quick_action=60)
+            processes = get_ps_output(root=False, quick_action=MEM_QUICK_ACTION)
             processes.patrol()
             sleep(UPDATE_TIME)
     except KeyboardInterrupt:
