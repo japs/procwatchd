@@ -14,7 +14,7 @@ __version__ = "0.6"
 from email.mime.text import MIMEText
 from logging import basicConfig, debug, info, warning, error ,critical, \
                     DEBUG, INFO, WARNING, ERROR, CRITICAL
-from os import kill, popen
+from os import kill
 from re import search
 from smtplib import SMTP
 from subprocess import check_output
@@ -144,7 +144,10 @@ def send_mail(from_address, to_address, msg):
     #double check the behaviour of set_debuglevel and eventually
     #integrate it in the logging facility
     connection.set_debuglevel(False)
-    connection.sendmail(from_address, to_address, msg.as_string())
+    try:
+        connection.sendmail(from_address, to_address, msg.as_string())
+    except Exception as exc:
+        critical("SENDMAIL ERROR: " + exc)
     connection.quit()
 
 
