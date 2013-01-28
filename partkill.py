@@ -9,7 +9,7 @@
 # century and look it up online!
 #
 
-__version__ = "0.6"
+__version__ = "0.7"
 
 from email.mime.text import MIMEText
 from logging import basicConfig, debug, info, warning, error ,critical, \
@@ -232,7 +232,6 @@ if __name__ == '__main__' :
     try:
         info("Patrolling started")
         while True:
-            debug("patrol update")
             processes = get_ps_output(root=False, quick_action=MEM_QUICK_ACTION)
             processes.patrol()
             sleep(UPDATE_TIME)
