@@ -9,7 +9,7 @@
 # century and look it up online!
 #
 
-__version__ = "0.5"
+__version__ = "0.6"
 
 from email.mime.text import MIMEText
 from logging import basicConfig, debug, info, warning, error ,critical, \
