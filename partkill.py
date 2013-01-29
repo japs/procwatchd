@@ -22,12 +22,16 @@ from sys import argv
 
 #USER DEFINITE STUFF
 LOG_FILE = 'procwatch.log'
-LOG_VERBOSITY = INFO
+LOG_VERBOSITY = DEBUG
 DRY_RUN = True           # If True, it doesn't actually kill anybody
 UPDATE_TIME = 2 #seconds
+ROOT_MONITOR = True
+ROOT_KILL = False
 
 #USER DEFINITE MAILER STUFF
 SMTP_SERVER = "smtp.example.eu:25"
+ADMIN_USR   = "admin"       # This is meant to be the part of the admin's 
+                            # email address that comes before the @ sign.
 ADMIN_EMAIL = "admin@admin"
 EMAIL_DOMAIN = "@domain.eu"
 EMAIL_SUBJECT = "Process Killed for improper use of host"
@@ -130,11 +134,21 @@ class Processes(dict):
 
 
 def annihilate(proc, signal):
-    if not DRY_RUN:
-        kill(int(proc.pid), signal)
-        critical("Killed process " + str(proc))
+    if not proc.usr == 'root':
+        if not DRY_RUN:
+            kill(int(proc.pid), signal)
+            critical("Killed process " + str(proc))
+        else:
+            info("DRYRUN, would kill process " + str(proc))
+    elif ROOT_KILL:
+        if not DRY_RUN:
+            kill(int(proc.pid), signal)
+            critical("Killed process " + str(proc))
+            proc.usr = ADMIN_USR
+        else:
+            info("DRYRUN, would kill process " + str(proc))
     else:
-        info("DRYRUN, would kill process " + str(proc))
+        info("ROOT RESOURCE USAGE" + str(proc))
     best_wishes(proc)
     return 0xDEADBEEF
 
@@ -178,7 +192,7 @@ def best_wishes(proc):
                                                               proc.pid))
 
 
-def get_ps_output(root=False, quick_action=MEM_QUICK_ACTION):
+def get_ps_output(root=ROOT_MONITOR, quick_action=MEM_QUICK_ACTION):
     ''' Fetch the output of `ps aux` and return it as a list,
         one per output line.
         Optionally omit the processes of user root by setting
