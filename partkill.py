@@ -222,6 +222,8 @@ def get_ps_output(root=False, quick_action=MEM_QUICK_ACTION):
                 if selfkill == None:
                     # append to list
                     processes[p.pid] = p
+                else:
+                    debug("SELFKILL PREVENTED " + str(p))
     return processes
 
 
