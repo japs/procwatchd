@@ -9,12 +9,12 @@
 # century and look it up online!
 #
 
-__version__ = "0.6"
+__version__ = "0.7"
 
 from email.mime.text import MIMEText
 from logging import basicConfig, debug, info, warning, error ,critical, \
                     DEBUG, INFO, WARNING, ERROR, CRITICAL
-from os import kill, popen
+from os import kill
 from re import search
 from smtplib import SMTP
 from subprocess import check_output
@@ -200,7 +200,7 @@ def get_ps_output(root=False, quick_action=MEM_QUICK_ACTION):
                          osplit[PS_COL_CPU],
                          osplit[PS_COL_MEM],
                          osplit[PS_COL_TIME],
-                         osplit[PS_COL_CMD]  )
+                         osplit[PS_COL_CMD:]  )
         if (quick_action > 0 and float(p.mem) > quick_action):
                 annihilate(p, 9)
         else:
@@ -229,7 +229,6 @@ if __name__ == '__main__' :
     try:
         info("Patrolling started")
         while True:
-            debug("patrol update")
             processes = get_ps_output(root=False, quick_action=MEM_QUICK_ACTION)
             processes.patrol()
             sleep(UPDATE_TIME)
