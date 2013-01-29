@@ -9,7 +9,7 @@
 # century and look it up online!
 #
 
-__version__ = "0.7"
+__version__ = "0.8"
 
 from email.mime.text import MIMEText
 from logging import basicConfig, debug, info, warning, error ,critical, \
@@ -144,7 +144,10 @@ def send_mail(from_address, to_address, msg):
     #double check the behaviour of set_debuglevel and eventually
     #integrate it in the logging facility
     connection.set_debuglevel(False)
-    connection.sendmail(from_address, to_address, msg.as_string())
+    try:
+        connection.sendmail(from_address, to_address, msg.as_string())
+    except Exception as exc:
+        critical("SENDMAIL ERROR: " + exc)
     connection.quit()
 
 
