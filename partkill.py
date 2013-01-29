@@ -203,7 +203,7 @@ def get_ps_output(root=False, quick_action=MEM_QUICK_ACTION):
                          osplit[PS_COL_CPU],
                          osplit[PS_COL_MEM],
                          osplit[PS_COL_TIME],
-                         " ".joint(osplit[PS_COL_CMD:])  )
+                         " ".join(osplit[PS_COL_CMD:])  )
         if (quick_action > 0 and float(p.mem) > quick_action):
                 annihilate(p, 9)
         else:
