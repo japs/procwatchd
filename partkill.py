@@ -113,11 +113,9 @@ class Process():
             self.check_time_cpu(TIME_WATCH, TIME_KILL, 
                                 CPU_WATCH, CPU_KILL)
     def __repr__(self):
-        r = "Process PID %s (%s)\n" %(self.pid, self.usr)
-        r += "                              "
-        r += "MEM %s\tCPU %s\tTIME %s\n" %(self.mem, self.cpu, 
+        r = "Process PID %s (%s)\t" %(self.pid, self.usr)
+        r += "MEM %s\tCPU %s\tTIME %s\t" %(self.mem, self.cpu, 
                                                   self.time)
-        r += "                              "
         r += self.cmd
         return r
 
