@@ -142,7 +142,6 @@ def annihilate(proc, signal):
         if not DRY_RUN:
             kill(int(proc.pid), signal)
             critical("Killed process " + str(proc))
-            proc.usr = ADMIN_USR
         else:
             info("DRYRUN, would kill process " + str(proc))
     else:
@@ -166,6 +165,8 @@ def send_mail(from_address, to_address, msg):
 def best_wishes(proc):
     ''' Send a mail with best wishes to the owner of process pid.
     '''
+    if proc.usr == 'root':
+       proc.usr = ADMIN_USR
     if not DRY_RUN:
         mailtext="Dear "+proc.usr+",\nyour process "+proc.cmd+" was killed " \
                   +"because it was using too much resources:\n" \
