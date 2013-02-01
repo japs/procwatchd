@@ -37,7 +37,7 @@ EMAIL_DOMAIN = "@domain.eu"
 EMAIL_SUBJECT = "Process Killed for improper use of host"
 
 #processes that will be killed only in the event of a memory quick_action
-PROC_WHITELIST = ['cp', 'ssh', 'scp', 'tar', 'screen', 'mv']
+PROC_WHITELIST = ['cp', 'sshd', 'ssh', 'scp', 'tar', 'screen', 'mv']
 
 #LIMITS          # unit
 MEM_QUICK_ACTION = 80 # %
