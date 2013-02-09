@@ -38,6 +38,8 @@ EMAIL_SUBJECT = "Process Killed for improper use of host"
 
 #processes that will be killed only in the event of a memory quick_action
 PROC_WHITELIST = ['cp', 'sshd', 'ssh', 'scp', 'tar', 'screen', 'mv']
+PROC_BLACKLIST = ['root.exe']
+
 
 #LIMITS          # unit
 MEM_QUICK_ACTION = 80 # %
@@ -222,11 +224,17 @@ def get_ps_output(root=ROOT_MONITOR, quick_action=MEM_QUICK_ACTION):
         else:
             # check if command is in the whitelist
             whitelist = False
+            blacklist = False
+            cmdsplit = (p.cmd).split()[0]
             for proc in PROC_WHITELIST:
-                cmdsplit = (p.cmd).split()[0]
                 whitelisted = search('/' + proc + '$', cmdsplit)
                 if whitelisted != None:
                     whitelist = True
+            for proc in PROC_BLACKLIST:
+                 blacklisted = search('/' + proc + '$', cmdsplit)
+                 if blacklisted != None:
+                     debug("BLACKLISTED " + str(p))
+                     annihilate(p)
             if whitelist:
                 debug("WHITELISTED " + str(p))
             else:
